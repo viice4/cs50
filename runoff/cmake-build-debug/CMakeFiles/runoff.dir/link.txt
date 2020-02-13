@@ -1,3 +1,0 @@
-"U:\Programs\JetBrains\CLion 2019.3\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\runoff.dir/objects.a
-U:\Programs\MinGW\bin\ar.exe cr CMakeFiles\runoff.dir/objects.a @CMakeFiles\runoff.dir\objects1.rsp
-U:\Programs\MinGW\bin\gcc.exe -g   -Wl,--whole-archive CMakeFiles\runoff.dir/objects.a -Wl,--no-whole-archive  -o runoff.exe -Wl,--out-implib,librunoff.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\runoff.dir\linklibs.rsp

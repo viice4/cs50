@@ -1,3 +1,0 @@
-"U:\Programs\JetBrains\CLion 2019.3\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\readability.dir/objects.a
-U:\Programs\MinGW\bin\ar.exe cr CMakeFiles\readability.dir/objects.a @CMakeFiles\readability.dir\objects1.rsp
-U:\Programs\MinGW\bin\gcc.exe -g   -Wl,--whole-archive CMakeFiles\readability.dir/objects.a -Wl,--no-whole-archive  -o readability.exe -Wl,--out-implib,libreadability.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\readability.dir\linklibs.rsp

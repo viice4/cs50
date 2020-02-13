@@ -1,3 +1,0 @@
-U:/Projects/C/cs50/readability/cmake-build-debug/CMakeFiles/readability.dir
-U:/Projects/C/cs50/readability/cmake-build-debug/CMakeFiles/edit_cache.dir
-U:/Projects/C/cs50/readability/cmake-build-debug/CMakeFiles/rebuild_cache.dir

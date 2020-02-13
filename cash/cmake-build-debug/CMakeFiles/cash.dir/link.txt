@@ -1,3 +1,0 @@
-"U:\Programs\JetBrains\CLion 2019.3\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\cash.dir/objects.a
-U:\Programs\MinGW\bin\ar.exe cr CMakeFiles\cash.dir/objects.a @CMakeFiles\cash.dir\objects1.rsp
-U:\Programs\MinGW\bin\gcc.exe -g   -Wl,--whole-archive CMakeFiles\cash.dir/objects.a -Wl,--no-whole-archive  -o cash.exe -Wl,--out-implib,libcash.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\cash.dir\linklibs.rsp

@@ -1,3 +1,0 @@
-"U:\Programs\JetBrains\CLion 2019.3\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\cs50.dir/objects.a
-U:\Programs\MinGW\bin\ar.exe cr CMakeFiles\cs50.dir/objects.a @CMakeFiles\cs50.dir\objects1.rsp
-U:\Programs\MinGW\bin\gcc.exe -g   -Wl,--whole-archive CMakeFiles\cs50.dir/objects.a -Wl,--no-whole-archive  -o cs50.exe -Wl,--out-implib,libcs50.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\cs50.dir\linklibs.rsp
