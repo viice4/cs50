@@ -1,162 +1,153 @@
-#include <math.h>
+#include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "helpers.h"
 
-// Convert image to grayscale
-void grayscale(int height, int width, RGBTRIPLE image[height][width])
+int main(int argc, char *argv[])
 {
+
+    // Define allowable filters
+    char *filters = "bgrs";
+
+    // Get filter flag and check validity
+    char filter = getopt(argc, argv, filters);
+    if (filter == '?')
+    {
+        fprintf(stderr, "Invalid filter.\n");
+        return 1;
+    }
+
+    // Ensure only one filter
+    if (getopt(argc, argv, filters) != -1)
+    {
+        fprintf(stderr, "Only one filter allowed.\n");
+        return 2;
+    }
+
+    // Ensure proper usage
+    if (argc != optind + 2)
+    {
+        fprintf(stderr, "Usage: filter [flag] infile outfile\n");
+        return 3;
+    }
+
+    // Remember filenames
+    char *infile = argv[optind];
+    char *outfile = argv[optind + 1];
+
+    // Open input file
+    FILE *inptr = fopen(infile, "r");
+    if (inptr == NULL)
+    {
+        fprintf(stderr, "Could not open %s.\n", infile);
+        return 4;
+    }
+
+    // Open output file
+    FILE *outptr = fopen(outfile, "w");
+    if (outptr == NULL)
+    {
+        fclose(inptr);
+        fprintf(stderr, "Could not create %s.\n", outfile);
+        return 5;
+    }
+
+    // Read infile's BITMAPFILEHEADER
+    BITMAPFILEHEADER bf;
+    fread(&bf, sizeof(BITMAPFILEHEADER), 1, inptr);
+
+    // Read infile's BITMAPINFOHEADER
+    BITMAPINFOHEADER bi;
+    fread(&bi, sizeof(BITMAPINFOHEADER), 1, inptr);
+
+    // Ensure infile is (likely) a 24-bit uncompressed BMP 4.0
+    if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 ||
+        bi.biBitCount != 24 || bi.biCompression != 0)
+    {
+        fclose(outptr);
+        fclose(inptr);
+        fprintf(stderr, "Unsupported file format.\n");
+        return 6;
+    }
+
+    int height = abs(bi.biHeight);
+    int width = bi.biWidth;
+
+    // Allocate memory for image
+    RGBTRIPLE(*image)[width] = calloc(height, width * sizeof(RGBTRIPLE));
+    if (image == NULL)
+    {
+        fprintf(stderr, "Not enough memory to store image.\n");
+        fclose(outptr);
+        fclose(inptr);
+        return 7;
+    }
+
+    // Determine padding for scanlines
+    int padding = (4 - (width * sizeof(RGBTRIPLE)) % 4) % 4;
+
+    // Iterate over infile's scanlines
     for (int i = 0; i < height; i++)
     {
-        for (int j = 0; j < width; j++)
-        {
-            double averege0 = (image[i][j].rgbtBlue + image[i][j].rgbtGreen + image[i][j].rgbtRed) / 3.0;
-            int averege = round(averege0);
-            image[i][j].rgbtBlue = averege;
-            image[i][j].rgbtGreen = averege;
-            image[i][j].rgbtRed = averege;
-        }
-    }
-    return;
-}
+        // Read row into pixel array
+        fread(image[i], sizeof(RGBTRIPLE), width, inptr);
 
-// Convert image to sepia
-void sepia(int height, int width, RGBTRIPLE image[height][width])
-{
+        // Skip over padding
+        fseek(inptr, padding, SEEK_CUR);
+    }
+
+    // Filter image
+    switch (filter)
+    {
+        // Blur
+        case 'b':
+            blur(height, width, image);
+            break;
+
+        // Grayscale
+        case 'g':
+            grayscale(height, width, image);
+            break;
+
+        // Reflection
+        case 'r':
+            reflect(height, width, image);
+            break;
+
+        // Sepia
+        case 's':
+            sepia(height, width, image);
+            break;
+    }
+
+    // Write outfile's BITMAPFILEHEADER
+    fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outptr);
+
+    // Write outfile's BITMAPINFOHEADER
+    fwrite(&bi, sizeof(BITMAPINFOHEADER), 1, outptr);
+
+    // Write new pixels to outfile
     for (int i = 0; i < height; i++)
     {
-        for (int j = 0; j < width; j++)
+        // Write row to outfile
+        fwrite(image[i], sizeof(RGBTRIPLE), width, outptr);
+
+        // Write padding at end of row
+        for (int k = 0; k < padding; k++)
         {
-            int sepiaRed = round(.393 * image[i][j].rgbtRed 
-            + .769 * image[i][j].rgbtGreen + .189 * image[i][j].rgbtBlue);
-            int sepiaGreen = round(.349 * image[i][j].rgbtRed 
-            + .686 * image[i][j].rgbtGreen + .168 * image[i][j].rgbtBlue);
-            int sepiaBlue = round(.272 * image[i][j].rgbtRed 
-            + .534 * image[i][j].rgbtGreen + .131 * image[i][j].rgbtBlue);
-            
-            if (sepiaRed <= 255)
-            {
-                image[i][j].rgbtRed = sepiaRed;
-            }
-            else
-            {
-                image[i][j].rgbtRed = 255;
-            }
-            if (sepiaGreen <= 255)
-            {
-                image[i][j].rgbtGreen = sepiaGreen;
-            }
-            else
-            {
-                image[i][j].rgbtGreen = 255;
-            }
-            if (sepiaBlue <= 255)
-            {
-                image[i][j].rgbtBlue = sepiaBlue;
-            }
-            else
-            {
-                image[i][j].rgbtBlue = 255;
-            }
+            fputc(0x00, outptr);
         }
     }
-    return;
-}
 
-// Reflect image horizontally
-void reflect(int height, int width, RGBTRIPLE image[height][width])
-{
-    for (int i = 0; i < height; i++)
-    {
-        for (int j = 0; j < (width  - 1) / 2; j++)
-        {
-            int exBlue = image[i][j].rgbtBlue;
-            int exGreen = image[i][j].rgbtGreen;
-            int exRed = image[i][j].rgbtRed;
-            image[i][j].rgbtBlue = image[i][width - 1 - j].rgbtBlue;
-            image[i][j].rgbtGreen = image[i][width - 1 - j].rgbtGreen;
-            image[i][j].rgbtRed = image[i][width - 1 - j].rgbtRed;
-            image[i][width - 1 - j].rgbtBlue = exBlue;
-            image[i][width - 1 - j].rgbtGreen = exGreen;
-            image[i][width - 1 - j].rgbtRed = exRed;
-        }
-    }
-    return;
-}
+    // Free memory for image
+    free(image);
 
-// Blur image
-void blur(int height, int width, RGBTRIPLE image[height][width])
-{
-    image[0][0].rgbtBlue = round((image[0][0].rgbtBlue + image[0][1].rgbtBlue 
-        + image[1][0].rgbtBlue + image[1][1].rgbtBlue) / 4.0);
-    image[height - 1][0].rgbtBlue = round((image[height - 1][0].rgbtBlue + image[height - 1][1].rgbtBlue 
-        + image[height - 2][0].rgbtBlue + image[height - 2][1].rgbtBlue) / 4.0);
-    image[0][width - 1].rgbtBlue = round((image[0][width - 1].rgbtBlue + image[0][width - 2].rgbtBlue 
-        + image[1][width - 1].rgbtBlue + image[1][width - 2].rgbtBlue) / 4.0);
-    image[height - 1][width - 1].rgbtBlue = (image[height - 1][width - 1].rgbtBlue 
-        + image[height - 1][width - 2].rgbtBlue + image[height - 2][width - 1].rgbtBlue 
-        + image[height - 2][width - 2].rgbtBlue) / 4;
-    
-    for (int i = 1; i < height - 1; i++)
-    {
-        image[i][0].rgbtBlue = (image[i - 1][0].rgbtBlue + image[i - 1][1].rgbtBlue 
-            + image[i][0].rgbtBlue + image[i][1].rgbtBlue + image[i + 2][0].rgbtBlue 
-            + image[i + 2][1].rgbtBlue) / 6;
-        image[i][0].rgbtGreen = (image[i - 1][0].rgbtGreen + image[i - 1][1].rgbtGreen 
-            + image[i][0].rgbtGreen + image[i][1].rgbtGreen + image[i + 2][0].rgbtGreen 
-            + image[i + 2][1].rgbtGreen) / 6;
-        image[i][0].rgbtRed = (image[i - 1][0].rgbtRed + image[i - 1][1].rgbtRed 
-            + image[i][0].rgbtRed + image[i][1].rgbtRed + image[i + 2][0].rgbtRed 
-            + image[i + 2][1].rgbtRed) / 6;
+    // Close infile
+    fclose(inptr);
 
-        image[i][width - 1].rgbtBlue = (image[i - 1][width - 1].rgbtBlue + image[i - 1][width - 2].rgbtBlue 
-            + image[i][width - 1].rgbtBlue + image[i][width - 2].rgbtBlue + image[i + 2][width - 1].rgbtBlue 
-            + image[i + 2][width - 2].rgbtBlue) / 6;
-        image[i][width - 1].rgbtGreen = (image[i - 1][width - 1].rgbtGreen + image[i - 1][width - 2].rgbtGreen 
-            + image[i][width - 1].rgbtGreen + image[i][width - 2].rgbtGreen + image[i + 2][width - 1].rgbtGreen 
-            + image[i + 2][width - 2].rgbtGreen) / 6;
-        image[i][width - 1].rgbtRed = (image[i - 1][width - 1].rgbtRed + image[i - 1][width - 2].rgbtRed 
-            + image[i][width - 1].rgbtRed + image[i][width - 2].rgbtRed + image[i + 2][width - 1].rgbtRed 
-            + image[i + 2][width - 2].rgbtRed) / 6;
-    }
-    for (int i = 1; i < width - 1;i++)
-    {
-        image[0][i].rgbtBlue = (image[0][i - 1].rgbtBlue + image[0][i].rgbtBlue 
-            + image[0][i + 1].rgbtBlue + image[1][i - 1].rgbtBlue + image[0][i].rgbtBlue 
-            + image[0][i + 1].rgbtBlue) / 6;
-        image[0][i].rgbtGreen = (image[0][i - 1].rgbtGreen + image[0][i].rgbtGreen 
-            + image[0][i + 1].rgbtGreen + image[1][i - 1].rgbtGreen + image[0][i].rgbtGreen 
-            + image[0][i + 1].rgbtGreen) / 6;
-        image[0][i].rgbtRed = (image[0][i - 1].rgbtRed + image[0][i].rgbtRed 
-            + image[0][i + 1].rgbtRed + image[1][i - 1].rgbtRed + image[0][i].rgbtRed 
-            + image[0][i + 1].rgbtRed) / 6;
+    // Close outfile
+    fclose(outptr);
 
-        image[height - 1][i].rgbtBlue = (image[height - 1][i - 1].rgbtBlue + image[height - 1][i].rgbtBlue 
-            + image[height - 1][i + 1].rgbtBlue + image[height - 2][i - 1].rgbtBlue + image[height - 2][i].rgbtBlue 
-            + image[height - 2][i + 1].rgbtBlue) / 6;
-        image[height - 1][i].rgbtGreen = (image[height - 1][i - 1].rgbtGreen + image[height - 1][i].rgbtGreen 
-            + image[height - 1][i + 1].rgbtGreen + image[height - 2][i - 1].rgbtGreen + image[height - 2][i].rgbtGreen 
-            + image[height - 2][i + 1].rgbtGreen) / 6;
-        image[height - 1][i].rgbtRed = (image[height - 1][i - 1].rgbtRed + image[height - 1][i].rgbtRed 
-            + image[height - 1][i + 1].rgbtRed + image[height - 2][i - 1].rgbtRed + image[height - 2][i].rgbtRed 
-            + image[height - 2][i + 1].rgbtRed) / 6;
-    }
-
-    for (int i = 1; i < height - 1; i++)
-    {
-        for (int j = 1; j < width - 1; j++)
-        {
-            image[i][j].rgbtBlue = (image[i - 1][j - 1].rgbtBlue + image[i - 1][j].rgbtBlue
-                + image[i - 1][j + 1].rgbtBlue + image[i][j - 1].rgbtBlue + image[i][j].rgbtBlue
-                + image[i][j + 1].rgbtBlue + image[i + 1][j - 1].rgbtBlue + image[i + 1][j].rgbtBlue
-                + image[i + 1][j + 1].rgbtBlue) / 9;
-            image[i][j].rgbtGreen = (image[i - 1][j - 1].rgbtGreen + image[i - 1][j].rgbtGreen
-                + image[i - 1][j + 1].rgbtGreen + image[i][j - 1].rgbtGreen + image[i][j].rgbtGreen
-                + image[i][j + 1].rgbtGreen + image[i + 1][j - 1].rgbtGreen + image[i + 1][j].rgbtGreen
-                + image[i + 1][j + 1].rgbtGreen) / 9;
-            image[i][j].rgbtRed = (image[i - 1][j - 1].rgbtRed + image[i - 1][j].rgbtRed
-                + image[i - 1][j + 1].rgbtRed + image[i][j - 1].rgbtRed + image[i][j].rgbtRed
-                + image[i][j + 1].rgbtRed + image[i + 1][j - 1].rgbtRed + image[i + 1][j].rgbtRed
-                + image[i + 1][j + 1].rgbtRed) / 9;
-        }
-    }
-    return;
+    return 0;
 }
