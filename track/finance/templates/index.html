@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Portfolio
+{% endblock %}
+
+{% block main %}
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th scope="col">Symbol</th>
+            <th scope="col">Name</th>
+            <th scope="col">Shares</th>
+            <th scope="col">Price</th>
+            <th scope="col">Total</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for stock in stocks %}
+            <tr>
+                <th scope="row">{{ stock['symbol'] }}</th>
+                <td>{{ company }}</td>
+                <td>{{ stock['shares'] }}</td>
+                <td>{{ stock['price'] }}</td>
+                <td>{{ stock['sum'] }}</td>
+            </tr>
+        {% endfor %}
+
+        <tr>
+            <th scope="row">CASH</th>
+            <td> </td>
+            <td> </td>
+            <td> </td>
+            <td>{{ amount }}</td>
+        </tr>
+    </tbody>
+</table>
+{% endblock %}
